@@ -11,6 +11,14 @@ import activityLogRoutes from "./activityLog.routes";
 
 const router = Router();
 
+function statusResponse(message: string) {
+	return {
+		success: true,
+		message,
+		timestamp: new Date().toISOString(),
+	};
+}
+
 router.use("/auth", authRoutes);
 router.use("/accounts", userRoutes);
 router.use("/vendors", vendorRoutes);
@@ -21,6 +29,12 @@ router.use("/notifications", notificationRoutes);
 router.use("/emails", emailRoutes);
 router.use("/activity-logs", activityLogRoutes);
 
-router.get("/health", (_req, res) => res.json({ success: true, message: "API is healthy", timestamp: new Date() }));
+
+router.get("/", (_req, res) => res.json(statusResponse("API is running")));
+
+router.get("/health", (_req, res) => res.json(statusResponse("API is healthy")));
+
+// Render / uptime monitors can ping this lightweight endpoint to keep the service active.
+router.get("/awake", (_req, res) => res.json(statusResponse("API is awake")));
 
 export default router;
