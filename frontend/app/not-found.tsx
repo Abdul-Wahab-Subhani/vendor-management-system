@@ -12,7 +12,7 @@ export default function NotFound() {
       </div>
       <h1 className="font-display text-3xl font-bold text-ink dark:text-white">404</h1>
       <p className="mt-2 max-w-sm text-sm text-[rgb(var(--fg-muted))]">
-        The page you're looking for doesn't exist or may have been moved.
+        The page you&apos;re looking for doesn&apos;t exist or may have been moved.
       </p>
       <Link href="/dashboard" className="mt-6">
         <Button>Back to Dashboard</Button>

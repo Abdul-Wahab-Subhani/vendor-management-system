@@ -23,7 +23,7 @@ export default function VendorPortalPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-semibold text-ink dark:text-white">Welcome back, {user?.name?.split(" ")[0]}</h1>
-        <p className="mt-1 text-sm text-[rgb(var(--fg-muted))]">Here's what's happening with your quotation requests.</p>
+        <p className="mt-1 text-sm text-[rgb(var(--fg-muted))]">Here&apos;s what&apos;s happening with your quotation requests.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
