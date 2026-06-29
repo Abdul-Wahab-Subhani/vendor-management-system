@@ -7,6 +7,7 @@ import { ActivityLogService, ActivityActions } from "./activityLog.service";
 import { EmailService } from "./email.service";
 import { EmailTemplates } from "../emails/templates";
 import { RegisterInput, LoginInput } from "../validators/auth.validators";
+import { logger } from "../config/logger";
 
 interface LoginContext {
   ipAddress?: string;
@@ -60,25 +61,41 @@ export const AuthService = {
   async login(input: LoginInput, ctx: LoginContext) {
     const user = await prisma.user.findUnique({ where: { email: input.email } });
 
-    if (!user || !(await comparePassword(input.password, user.passwordHash))) {
-      if (user) {
-        await prisma.loginHistory.create({
-          data: { userId: user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent, success: false },
-        });
-        await ActivityLogService.log({
-          userId: user.id,
-          action: ActivityActions.USER_LOGIN_FAILED,
-          entityType: "User",
-          entityId: user.id,
-          description: "Failed login attempt (incorrect password)",
-          ipAddress: ctx.ipAddress,
-        });
-      }
+    if (!user) {
+      logger.warn("Login failed: user not found", { email: input.email, ipAddress: ctx.ipAddress });
+      throw new UnauthorizedError("Invalid email or password");
+    }
+
+    const passwordMatches = await comparePassword(input.password, user.passwordHash);
+    if (!passwordMatches) {
+      logger.warn("Login failed: invalid password", { email: input.email, userId: user.id, ipAddress: ctx.ipAddress });
+      await prisma.loginHistory.create({
+        data: { userId: user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent, success: false },
+      });
+      await ActivityLogService.log({
+        userId: user.id,
+        action: ActivityActions.USER_LOGIN_FAILED,
+        entityType: "User",
+        entityId: user.id,
+        description: "Failed login attempt (incorrect password)",
+        ipAddress: ctx.ipAddress,
+      });
       throw new UnauthorizedError("Invalid email or password");
     }
 
     if (user.status !== "ACTIVE") {
+      logger.warn("Login failed: account inactive", {
+        email: input.email,
+        userId: user.id,
+        status: user.status,
+        ipAddress: ctx.ipAddress,
+      });
       throw new UnauthorizedError(`Account is ${user.status.toLowerCase()}. Contact an administrator.`);
+    }
+
+    if (!user.isEmailVerified) {
+      logger.warn("Login failed: email not verified", { email: input.email, userId: user.id, ipAddress: ctx.ipAddress });
+      throw new UnauthorizedError("Email not verified. Please verify your email first.");
     }
 
     const tokens = await this.issueTokenPair(user.id, user.email, user.role);
