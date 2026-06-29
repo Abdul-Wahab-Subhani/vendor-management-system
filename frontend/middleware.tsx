@@ -13,12 +13,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Everything else requires a session (role-level checks happen client-side
-  // once /auth/me resolves, since role isn't readable from an httpOnly cookie here)
-  if (!isPublic && !hasSession && pathname !== "/") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
   return NextResponse.next();
 }
 

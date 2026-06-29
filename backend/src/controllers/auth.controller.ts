@@ -33,14 +33,14 @@ export const AuthController = {
       userAgent: req.headers["user-agent"],
     });
     setAuthCookies(res, result.accessToken, result.refreshToken);
-    sendSuccess(res, { user: result.user, accessToken: result.accessToken }, "Logged in successfully");
+    sendSuccess(res, { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken }, "Logged in successfully");
   }),
 
   refresh: asyncHandler(async (req: Request, res: Response) => {
     const token = req.cookies?.[REFRESH_COOKIE] ?? req.body.refreshToken;
     const result = await AuthService.refresh(token);
     setAuthCookies(res, result.accessToken, result.refreshToken);
-    sendSuccess(res, { accessToken: result.accessToken }, "Token refreshed");
+    sendSuccess(res, { accessToken: result.accessToken, refreshToken: result.refreshToken }, "Token refreshed");
   }),
 
   logout: asyncHandler(async (req: Request, res: Response) => {

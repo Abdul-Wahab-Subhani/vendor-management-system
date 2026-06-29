@@ -35,8 +35,10 @@ api.interceptors.response.use(
 
       isRefreshing = true;
       try {
-        const { data } = await api.post("/auth/refresh");
+        const refreshToken = useAuthStore.getState().refreshToken;
+        const { data } = await api.post("/auth/refresh", refreshToken ? { refreshToken } : undefined);
         useAuthStore.getState().setAccessToken(data.data.accessToken);
+        useAuthStore.getState().setRefreshToken(data.data.refreshToken);
         pendingQueue.forEach((resolve) => resolve());
         pendingQueue = [];
         return api(originalRequest);

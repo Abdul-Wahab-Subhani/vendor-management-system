@@ -14,15 +14,22 @@ interface LoginInput {
 }
 
 export function useBootstrapAuth() {
-  const { setUser, setAccessToken, setInitializing } = useAuthStore();
+  const { setUser, setAccessToken, setRefreshToken, setInitializing, refreshToken, user } = useAuthStore();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const { data } = await api.post("/auth/refresh");
+        // If no session exists, we're done initializing
+        if (!refreshToken && !user) {
+          if (mounted) setInitializing(false);
+          return;
+        }
+
+        const { data } = await api.post("/auth/refresh", refreshToken ? { refreshToken } : undefined);
         if (!mounted) return;
         setAccessToken(data.data.accessToken);
+        setRefreshToken(data.data.refreshToken);
         const me = await api.get("/auth/me");
         if (!mounted) return;
         setUser(me.data.data as User);
@@ -42,7 +49,7 @@ export function useBootstrapAuth() {
 export function useAuth() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, setUser, accessToken, setAccessToken, clearAuth, isInitializing } = useAuthStore();
+  const { user, setUser, accessToken, setAccessToken, setRefreshToken, clearAuth, isInitializing } = useAuthStore();
 
   const loginMutation = useMutation({
     mutationFn: async (input: LoginInput) => {
@@ -52,6 +59,7 @@ export function useAuth() {
     onSuccess: (data) => {
       setUser(data.user as User);
       setAccessToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
       toast.success("Welcome back!");
       router.push(roleHome(data.user.role));
     },
