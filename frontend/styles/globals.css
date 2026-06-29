@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 247 246 243; /* paper */
+  --bg-elevated: 255 255 255;
+  --fg: 27 31 39; /* ink */
+  --fg-muted: 100 109 125;
+  --border: 229 231 235;
+  --sidebar-bg: 20 33 61; /* navy-800 */
+}
+
+.dark {
+  --bg: 10 18 36; /* navy-950 */
+  --bg-elevated: 15 27 51; /* navy-900 */
+  --fg: 237 240 246;
+  --fg-muted: 148 161 184;
+  --border: 34 48 74;
+  --sidebar-bg: 10 18 36;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-feature-settings: "tnum" 1; /* tabular numerals for figures/amounts */
+}
+
+/* Ledger-style numeric figures everywhere money/IDs appear */
+.figure {
+  font-family: var(--font-jetbrains), monospace;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border-radius: 8px;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(150, 150, 150, 0.08) 25%,
+    rgba(150, 150, 150, 0.18) 37%,
+    rgba(150, 150, 150, 0.08) 63%
+  );
+  background-size: 700px 100%;
+  animation: shimmer 1.8s infinite linear;
+}
+
+/* Visible keyboard focus ring across the app */
+:focus-visible {
+  outline: 2px solid #fca311;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

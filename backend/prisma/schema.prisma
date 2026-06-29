@@ -1,0 +1,357 @@
+// ============================================================================
+// Vendor Management & Quotation System — Database Schema
+// ============================================================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  VENDOR
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  BLACKLISTED
+}
+
+enum QuotationRequestStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum VendorAssignmentStatus {
+  PENDING
+  SUBMITTED
+  DECLINED
+}
+
+enum QuotationStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  QUOTATION
+  VENDOR
+  SYSTEM
+}
+
+enum EmailStatus {
+  QUEUED
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+// ----------------------------------------------------------------------------
+// Auth & Users
+// ----------------------------------------------------------------------------
+
+model User {
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  passwordHash       String
+  name               String
+  role               Role          @default(VENDOR)
+  status             AccountStatus @default(ACTIVE)
+  avatarUrl          String?
+  isEmailVerified    Boolean       @default(false)
+  emailVerifyToken   String?       @unique
+  emailVerifyExpires DateTime?
+  resetToken         String?       @unique
+  resetTokenExpires  DateTime?
+  lastLoginAt        DateTime?
+
+  vendorId String?
+  vendor   Vendor? @relation("VendorUserAccounts", fields: [vendorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens     RefreshToken[]
+  loginHistory      LoginHistory[]
+  activityLogs      ActivityLog[]
+  notifications     Notification[]
+  vendorNotes       VendorNote[]
+  createdVendors    Vendor[]            @relation("VendorCreatedBy")
+  createdQuotations QuotationRequest[]  @relation("QuotationCreatedBy")
+  reviewedQuotations Quotation[]        @relation("QuotationReviewedBy")
+  uploadedDocuments VendorDocument[]
+  sentEmails        EmailLog[]          @relation("EmailSentBy")
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("login_history")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String
+  entityId    String?
+  description String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ----------------------------------------------------------------------------
+// Vendor Management
+// ----------------------------------------------------------------------------
+
+model Vendor {
+  id               String       @id @default(cuid())
+  vendorName       String
+  companyName      String
+  email            String       @unique
+  contactNumber    String
+  businessAddress  String
+  registrationDate DateTime     @default(now())
+  status           VendorStatus @default(PENDING)
+  rating           Float?       @default(0)
+  category         String?
+
+  createdById String?
+  createdBy   User?   @relation("VendorCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userAccounts        User[]               @relation("VendorUserAccounts")
+  notes               VendorNote[]
+  documents            VendorDocument[]
+  quotationAssignments QuotationRequestVendor[]
+  quotations           Quotation[]
+
+  @@index([status])
+  @@index([companyName])
+  @@map("vendors")
+}
+
+model VendorNote {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
+  @@map("vendor_notes")
+}
+
+model VendorDocument {
+  id           String   @id @default(cuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileUrl      String
+  fileType     String
+  fileSize     Int?
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([vendorId])
+  @@map("vendor_documents")
+}
+
+// ----------------------------------------------------------------------------
+// Quotation Management
+// ----------------------------------------------------------------------------
+
+model QuotationRequest {
+  id          String                  @id @default(cuid())
+  title       String
+  description String
+  status      QuotationRequestStatus  @default(DRAFT)
+  dueDate     DateTime?
+
+  createdById String
+  createdBy   User    @relation("QuotationCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedVendors QuotationRequestVendor[]
+  quotations      Quotation[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("quotation_requests")
+}
+
+model QuotationRequestVendor {
+  id                  String                  @id @default(cuid())
+  quotationRequestId  String
+  quotationRequest    QuotationRequest        @relation(fields: [quotationRequestId], references: [id], onDelete: Cascade)
+  vendorId            String
+  vendor              Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  status              VendorAssignmentStatus  @default(PENDING)
+  assignedAt          DateTime                @default(now())
+
+  @@unique([quotationRequestId, vendorId])
+  @@index([vendorId])
+  @@map("quotation_request_vendors")
+}
+
+model Quotation {
+  id                 String          @id @default(cuid())
+  quotationRequestId String
+  quotationRequest   QuotationRequest @relation(fields: [quotationRequestId], references: [id], onDelete: Cascade)
+  vendorId           String
+  vendor             Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  title          String
+  description    String
+  amount         Decimal         @db.Decimal(14, 2)
+  currency       String          @default("USD")
+  submissionDate DateTime?
+  status         QuotationStatus @default(PENDING)
+  internalNotes  String?
+
+  reviewedById String?
+  reviewedBy   User?   @relation("QuotationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attachments QuotationAttachment[]
+
+  @@index([quotationRequestId])
+  @@index([vendorId])
+  @@index([status])
+  @@map("quotations")
+}
+
+model QuotationAttachment {
+  id          String   @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int?
+  createdAt   DateTime @default(now())
+
+  @@index([quotationId])
+  @@map("quotation_attachments")
+}
+
+// ----------------------------------------------------------------------------
+// Notifications & Email
+// ----------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  subject   String
+  htmlBody  String
+  variables Json?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id            String      @id @default(cuid())
+  to            String
+  subject       String
+  templateKey   String?
+  status        EmailStatus @default(QUEUED)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  error         String?
+  metadata      Json?
+
+  sentById String?
+  sentBy   User?   @relation("EmailSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([to])
+  @@map("email_logs")
+}
