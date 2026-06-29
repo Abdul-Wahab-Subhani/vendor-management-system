@@ -7,12 +7,16 @@ import { env } from "../config/env";
 const REFRESH_COOKIE = "refreshToken";
 const ACCESS_COOKIE = "accessToken";
 
-function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
-  const cookieOpts = {
+function getAuthCookieOptions() {
+  return {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: "lax" as const,
+    sameSite: env.isProduction ? ("none" as const) : ("lax" as const),
   };
+}
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  const cookieOpts = getAuthCookieOptions();
   res.cookie(ACCESS_COOKIE, accessToken, { ...cookieOpts, maxAge: 15 * 60 * 1000 });
   res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
@@ -40,8 +44,9 @@ export const AuthController = {
   }),
 
   logout: asyncHandler(async (req: Request, res: Response) => {
-    res.clearCookie(ACCESS_COOKIE);
-    res.clearCookie(REFRESH_COOKIE);
+    const cookieOpts = getAuthCookieOptions();
+    res.clearCookie(ACCESS_COOKIE, cookieOpts);
+    res.clearCookie(REFRESH_COOKIE, cookieOpts);
     sendSuccess(res, null, "Logged out successfully");
   }),
 
