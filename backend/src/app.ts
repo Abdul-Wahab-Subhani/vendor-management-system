@@ -12,6 +12,10 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 import { globalRateLimiter } from "./middleware/rateLimit.middleware";
 
 const app = express();
+const corsOptions = {
+  origin: env.clientUrl,
+  credentials: true,
+};
 
 // ---- Security ----
 app.use(
@@ -19,12 +23,8 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" }, // allow uploaded files to be fetched by the frontend
   })
 );
-app.use(
-  cors({
-    origin: env.clientUrl,
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(globalRateLimiter);
 
 // ---- Core middleware ----

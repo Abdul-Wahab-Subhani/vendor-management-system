@@ -1,10 +1,16 @@
 import axios, { AxiosError } from "axios";
 import { useAuthStore } from "./store";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+function normalizeApiBaseUrl(url?: string): string {
+  const trimmed = (url ?? "").trim().replace(/\/+$/, "");
+  if (!trimmed) return "/api/v1";
+  return trimmed.endsWith("/api/v1") ? trimmed : `${trimmed}/api/v1`;
+}
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: normalizeApiBaseUrl(API_URL),
   withCredentials: true, // sends/receives httpOnly accessToken / refreshToken cookies
 });
 

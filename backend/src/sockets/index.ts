@@ -5,16 +5,17 @@ import { env } from "../config/env";
 import { logger } from "../config/logger";
 
 let io: Server | undefined;
+const socketCorsOptions = {
+  origin: env.clientUrl,
+  credentials: true,
+};
 
 /** Maps userId -> set of connected socket ids, so we can target a user across multiple tabs/devices. */
 const userSockets = new Map<string, Set<string>>();
 
 export function initSocketServer(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
-    cors: {
-      origin: env.clientUrl,
-      credentials: true,
-    },
+    cors: socketCorsOptions,
   });
 
   io.use((socket: Socket, next) => {

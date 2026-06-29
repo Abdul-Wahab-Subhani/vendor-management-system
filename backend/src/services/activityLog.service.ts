@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 
 interface LogActivityInput {
@@ -6,7 +7,7 @@ interface LogActivityInput {
   entityType: string;
   entityId?: string | null;
   description: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
   ipAddress?: string | null;
 }
 

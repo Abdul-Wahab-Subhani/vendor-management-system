@@ -1,5 +1,9 @@
 import "dotenv/config";
 
+function normalizeUrl(value: string): string {
+  return value.trim().replace(/\/+$/, "");
+}
+
 function required(key: string, fallback?: string): string {
   const value = process.env[key] ?? fallback;
   if (value === undefined) {
@@ -12,7 +16,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   isProduction: process.env.NODE_ENV === "production",
   port: Number(process.env.PORT ?? 5000),
-  clientUrl: process.env.CLIENT_URL ?? "http://localhost:3000",
+  clientUrl: normalizeUrl(process.env.CLIENT_URL ?? "http://localhost:3000"),
 
   databaseUrl: required("DATABASE_URL"),
 
